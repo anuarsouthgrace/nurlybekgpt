@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0c0e">
+<title>Нурик ГПТ</title>
+<link rel="icon" href="nurik.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0e;
+    --panel: #000;
+    --line: #f4efe6;      /* белая рамка как в диалогах Undertale */
+    --text: #f4efe6;
+    --muted: #8d877c;
+    --accent: #ffd23f;    /* жёлтый "SOUL" для игрока */
+    --skin: #e9b98f;      /* цвет с фотки Нурика */
+    --danger: #ff5a4d;
+    --font: "Pixelify Sans", "Courier New", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(circle at 50% -20%, #1d1a17 0, transparent 60%);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 18px;
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow: hidden;
+  }
+
+  /* ---------- шапка ---------- */
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 4px solid var(--line);
+    background: var(--panel);
+    flex: 0 0 auto;
+  }
+  .avatar {
+    width: 48px; height: 48px; flex: 0 0 auto;
+    border: 3px solid var(--line);
+    background: #222 url("nurik.jpg") center 30% / cover no-repeat;
+    image-rendering: auto;
+    transition: transform .06s steps(2), box-shadow .06s;
+  }
+  .avatar.talk { transform: translateY(-4px); box-shadow: 0 0 14px 2px rgba(233,185,143,.65); border-color: var(--skin); }
+  header .title { flex: 1; min-width: 0; line-height: 1.1; }
+  header .title b { display: block; font-size: 22px; font-weight: 600; letter-spacing: .5px; }
+  header .title span { font-size: 14px; color: var(--muted); }
+  header .title span::before { content: ""; display: inline-block; width: 8px; height: 8px; background: #5bd96b; margin-right: 6px; }
+  .btn {
+    font: inherit; font-size: 15px; color: var(--text);
+    background: var(--panel); border: 3px solid var(--line);
+    padding: 8px 10px; cursor: pointer; min-height: 40px;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+  .btn:active { transform: translateY(2px); }
+  .btn[aria-pressed="true"] { color: var(--danger); border-color: var(--danger); }
+
+  /* ---------- чат ---------- */
+  #chat {
+    flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
+    padding: 16px 14px 8px;
+    display: flex; flex-direction: column; gap: 16px;
+    scroll-behavior: smooth;
+  }
+  .row { display: flex; gap: 10px; align-items: flex-start; max-width: 100%; }
+  .row.user { justify-content: flex-end; }
+  .row .avatar { width: 44px; height: 44px; margin-top: 2px; }
+  .bubble {
+    border: 4px solid var(--line); background: var(--panel);
+    padding: 10px 14px; max-width: min(640px, calc(100% - 60px));
+    line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere;
+    min-height: 48px;
+  }
+  .bot .bubble::before { content: "* "; color: var(--skin); }
+  .user .bubble { border-color: var(--accent); color: var(--accent); }
+  .user .bubble::before { content: "♥ "; color: var(--danger); }
+  .bubble.err { border-color: var(--danger); color: var(--danger); }
+  .dots::after { content: ""; animation: dots 1s steps(4) infinite; }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+
+  /* ---------- ввод ---------- */
+  form {
+    display: flex; gap: 10px; padding: 10px 14px 14px;
+    border-top: 4px solid var(--line); background: var(--panel); flex: 0 0 auto;
+  }
+  textarea {
+    flex: 1; resize: none; font: inherit; font-size: 16px; /* 16px — чтобы iOS не зумил */
+    color: var(--text); background: #000; border: 3px solid var(--line);
+    padding: 10px 12px; max-height: 120px; outline: none; border-radius: 0;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+  #send { color: #000; background: var(--accent); border-color: var(--accent); font-weight: 600; padding: 0 16px; }
+  #send:disabled { opacity: .45; cursor: not-allowed; }
+  .hint { text-align: center; font-size: 12px; color: var(--muted); padding: 0 0 6px; background: var(--panel); }
+
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    header { padding: 8px 10px; gap: 8px; }
+    .avatar { width: 42px; height: 42px; }
+    .btn { padding: 6px 8px; font-size: 14px; }
+    #chat { padding: 12px 10px 6px; }
+    .row .avatar { width: 38px; height: 38px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .avatar { transition: none; }
+    #chat { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="avatar" id="headAvatar" role="img" aria-label="Нурик"></div>
+  <div class="title"><b>Нурик ГПТ</b><span>в сети, готов подколоть</span></div>
+  <button class="btn" id="muteBtn" type="button" aria-pressed="false">🔊 Звук</button>
+  <button class="btn" id="clearBtn" type="button">Очистить</button>
+</header>
+
+<main id="chat" aria-live="polite"></main>
+
+<div class="hint">Enter — отправить · Shift+Enter — новая строка</div>
+<form id="form" autocomplete="off">
+  <textarea id="input" rows="1" maxlength="1000" placeholder="Напиши Нурику..." enterkeyhint="send"></textarea>
+  <button class="btn" id="send" type="submit">Слать</button>
+</form>
+
+<script>
+(() => {
+  "use strict";
+
+  const chat = document.getElementById("chat");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const muteBtn = document.getElementById("muteBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const headAvatar = document.getElementById("headAvatar");
+
+  const GREETING = "Ну здарова. Я Нурик. Спрашивай чё хотел, только без глупостей 😎";
+  const STORE_KEY = "nurik_history_v1";   // память в рамках сессии вкладки
+  const MUTE_KEY = "nurik_muted_v1";
+
+  let history = [];       // [{role, content}]
+  let busy = false;
+  let runId = 0;          // для отмены печати при очистке чата
+  let muted = localStorage.getItem(MUTE_KEY) === "1";
+
+  /* ================= ЗВУК (Web Audio API, без файлов) ================= */
+  let ctx = null;
+
+  function unlockAudio() {
+    try {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") ctx.resume();
+    } catch (e) { ctx = null; }
+  }
+
+  // Короткий 8-битный "писк" как у Санса/Папируса
+  function blip() {
+    if (muted || !ctx || ctx.state !== "running") return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = Math.random() < 0.75 ? "square" : "triangle";
+    const base = 170;                                   // низковатый голос
+    osc.frequency.setValueAtTime(base * (0.9 + Math.random() * 0.35), t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.09, t + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.08);
+  }
+
+  function renderMute() {
+    muteBtn.textContent = muted ? "🔇 Звук" : "🔊 Звук";
+    muteBtn.setAttribute("aria-pressed", String(muted));
+    muteBtn.title = muted ? "Включить звук" : "Выключить звук";
+  }
+  muteBtn.addEventListener("click", () => {
+    muted = !muted;
+    localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+    if (!muted) unlockAudio();
+    renderMute();
+  });
+  renderMute();
+
+  /* ================= UI ================= */
+  function scrollDown() { chat.scrollTop = chat.scrollHeight; }
+
+  function addUser(text) {
+    const row = document.createElement("div");
+    row.className = "row user";
+    const b = document.createElement("div");
+    b.className = "bubble";
+    b.textContent = text;
+    row.appendChild(b);
+    chat.appendChild(row);
+    scrollDown();
+  }
+
+  function addBotRow() {
+    const row = document.createElement("div");
+    row.className = "row bot";
+    const av = document.createElement("div");
+    av.className = "avatar";
+    av.style.backgroundImage = 'url("nurik.jpg")';
+    const b = document.createElement("div");
+    b.className = "bubble";
+    row.append(av, b);
+    chat.appendChild(row);
+    scrollDown();
+    return { row, av, bubble: b };
+  }
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function bounce(avatars) {
+    avatars.forEach((a) => a.classList.add("talk"));
+    setTimeout(() => avatars.forEach((a) => a.classList.remove("talk")), 70);
+  }
+
+  // Печатная машинка + писк на каждую букву (кроме пробелов)
+  async function typeText(bubble, av, text, myRun) {
+    bubble.textContent = "";
+    const chars = Array.from(text);
+    let i = 0;
+    for (const ch of chars) {
+      if (myRun !== runId) return false;               // чат очистили
+      bubble.textContent += ch;
+      i++;
+      if (!/\s/.test(ch)) {
+        blip();
+        bounce([av, headAvatar]);
+      }
+      if (i % 3 === 0) scrollDown();
+      let d = 32;
+      if (/[.!?…]/.test(ch)) d = 260;
+      else if (/[,;:]/.test(ch)) d = 130;
+      else if (ch === "\n") d = 150;
+      await sleep(d);
+    }
+    scrollDown();
+    return true;
+  }
+
+  async function botSay(text, { instant = false } = {}) {
+    const myRun = runId;
+    const { av, bubble } = addBotRow();
+    if (instant) { bubble.textContent = text; scrollDown(); return; }
+    await typeText(bubble, av, text, myRun);
+  }
+
+  function showError(msg) {
+    const row = document.createElement("div");
+    row.className = "row bot";
+    const av = document.createElement("div");
+    av.className = "avatar";
+    av.style.backgroundImage = 'url("nurik.jpg")';
+    const b = document.createElement("div");
+    b.className = "bubble err";
+    b.textContent = msg;
+    row.append(av, b);
+    chat.appendChild(row);
+    scrollDown();
+  }
+
+  function save() {
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify(history.slice(-40))); } catch (e) {}
+  }
+
+  function setBusy(v) {
+    busy = v;
+    sendBtn.disabled = v;
+  }
+
+  /* ================= отправка ================= */
+  async function send(text) {
+    const myRun = runId;
+    history.push({ role: "user", content: text });
+    save();
+    addUser(text);
+
+    setBusy(true);
+    const { av, bubble, row } = addBotRow();
+    bubble.classList.add("dots");
+    bubble.textContent = "";
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history.slice(-20) }),
+      });
+      let data = {};
+      try { data = await res.json(); } catch (e) {}
+      if (myRun !== runId) return;                     // чат очистили пока ждали
+
+      bubble.classList.remove("dots");
+      if (!res.ok || !data.reply) {
+        row.remove();
+        history.pop();                                 // не засоряем память неудачным запросом
+        save();
+        showError(data.error || "Что-то сломалось, попробуй ещё раз");
+        return;
+      }
+      const ok = await typeText(bubble, av, data.reply, myRun);
+      if (ok) {
+        history.push({ role: "assistant", content: data.reply });
+        save();
+      }
+    } catch (e) {
+      if (myRun !== runId) return;
+      row.remove();
+      history.pop();
+      save();
+      showError("Нет связи с сервером. Проверь интернет.");
+    } finally {
+      if (myRun === runId) { setBusy(false); input.focus({ preventScroll: true }); }
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    unlockAudio();                                     // разблокировка звука на мобилках (клик по кнопке)
+    const text = input.value.trim();
+    if (!text || busy) return;
+    input.value = "";
+    autosize();
+    send(text);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  function autosize() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  }
+  input.addEventListener("input", autosize);
+
+  /* ================= очистка ================= */
+  clearBtn.addEventListener("click", () => {
+    runId++;                                           // обрываем печать/ожидание
+    history = [];
+    try { sessionStorage.removeItem(STORE_KEY); } catch (e) {}
+    chat.innerHTML = "";
+    setBusy(false);
+    botSay(GREETING);
+  });
+
+  /* ================= старт ================= */
+  function restore() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(STORE_KEY) || "[]");
+      if (Array.isArray(saved) && saved.length) {
+        history = saved;
+        botSay(GREETING, { instant: true });
+        for (const m of history) {
+          if (m.role === "user") addUser(m.content);
+          else botSay(m.content, { instant: true });
+        }
+        return;
+      }
+    } catch (e) {}
+    botSay(GREETING);
+  }
+  restore();
+})();
+</script>
+</body>
+</html>
