@@ -284,6 +284,24 @@
     sendBtn.disabled = v;
   }
 
+  /* ================= пасхалки ================= */
+  // Работают на клиенте, поэтому отвечают мгновенно и даже если сервер/модель лежат.
+  // Добавить свою: новый объект в массив. name — regex по имени, topic — regex по теме вопроса.
+  // Если topic не нужен, поставь null.
+  const EGGS = [
+    {
+      name: /ануарбек|анварбек|anuarbek/,
+      topic: /люб|нрав|влюбл|краш|симпат|сердц|девуш|кого/,
+      reply: "Шукрону 😏",
+    },
+  ];
+
+  function findEgg(text) {
+    const t = text.toLowerCase().replace(/ё/g, "е");
+    const egg = EGGS.find((e) => e.name.test(t) && (!e.topic || e.topic.test(t)));
+    return egg ? egg.reply : null;
+  }
+
   /* ================= отправка ================= */
   async function send(text) {
     const myRun = runId;
@@ -292,6 +310,20 @@
     addUser(text);
 
     setBusy(true);
+
+    const eggReply = findEgg(text);
+    if (eggReply) {
+      const e = addBotRow();
+      e.bubble.classList.add("dots");
+      await sleep(700);
+      if (myRun !== runId) return;
+      e.bubble.classList.remove("dots");
+      const ok = await typeText(e.bubble, e.av, eggReply, myRun);
+      if (ok) { history.push({ role: "assistant", content: eggReply }); save(); }
+      if (myRun === runId) { setBusy(false); input.focus({ preventScroll: true }); }
+      return;
+    }
+
     const { av, bubble, row } = addBotRow();
     bubble.classList.add("dots");
     bubble.textContent = "";
@@ -311,7 +343,14 @@
         row.remove();
         history.pop();                                 // не засоряем память неудачным запросом
         save();
-        showError(data.error || "Что-то сломалось, попробуй ещё раз");
+        let msg = data.error;
+        if (!msg) {
+          msg = "Сервер ответил " + res.status + ". ";
+          if (res.status === 404) msg += "Не найден /api/chat: папка api должна лежать в корне репозитория, а сайт — открываться с Vercel, не как файл.";
+          else if (res.status >= 500) msg += "Бэкенд упал: смотри Vercel → Logs и проверь переменную OPENROUTER_API_KEY.";
+          else msg += "Попробуй ещё раз.";
+        }
+        showError(msg);
         return;
       }
       const ok = await typeText(bubble, av, data.reply, myRun);
